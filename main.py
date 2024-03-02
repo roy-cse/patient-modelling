@@ -52,7 +52,7 @@ def main():
 
     data.drop(columns=columns_to_delete, inplace=True)
     
-    data.dropna(inplace=True)
+    data.dropna(axis=0, how='all', inplace=True)
     
     print("\nSummary statistics of numerical columns:\n", data.describe())
     
@@ -64,6 +64,7 @@ def main():
     
     print("\nFinal shape of the data:\n", data.shape)
 
+    # data.to_csv('processed_data.csv', index=False)
 
 if __name__ == '__main__':
     main()
