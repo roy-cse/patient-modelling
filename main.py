@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 def remove_outliers(df):
     numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
@@ -16,9 +16,9 @@ def remove_outliers(df):
     return df
 
 def feature_normalization(df):
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
     numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                  'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
