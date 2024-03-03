@@ -48,7 +48,7 @@ def main():
         'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride', 'acetohexamide',
         'tolbutamide', 'acarbose', 'miglitol', 'troglitazone', 'tolazamide', 'examide',
         'citoglipton', 'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone',
-        'metformin-rosiglitazone', 'metformin-pioglitazone']
+        'metformin-rosiglitazone', 'metformin-pioglitazone', 'payer_code', 'patient_nbr']
 
     data.drop(columns=columns_to_delete, inplace=True)
     
