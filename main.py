@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
 def remove_outliers(df):
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
+                  'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
     for col in numerical_cols:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)
@@ -16,7 +17,8 @@ def remove_outliers(df):
 
 def feature_normalization(df):
     scaler = StandardScaler()
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
+                  'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
