@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+import seaborn as sns
 
 def remove_outliers(df):
     numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
@@ -21,6 +22,13 @@ def feature_normalization(df):
                       'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
+
+def data_visualisation(data):
+    # distribution of unique classes of the target variable
+    print("\nDistribution of unique classes of the target variable:\n")
+    sns.countplot(x="readmitted", data=data, hue="readmitted", legend=False)
+    sns.set_theme(rc={"figure.figsize":(6, 3)})
+    plt.show()
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
@@ -67,6 +75,9 @@ def main():
     print("\nFinal shape of the data:\n", data.shape)
 
     # data.to_csv('processed_data.csv', index=False)
+
+    # Data Visualisation
+    data_visualisation(data)
 
 if __name__ == '__main__':
     main()
