@@ -25,9 +25,11 @@ def feature_normalization(df):
 
 def data_visualisation(data):
     # distribution of unique classes of the target variable
-    print("\nDistribution of unique classes of the target variable:\n")
-    sns.countplot(x="readmitted", data=data, hue="readmitted", legend=False)
-    sns.set_theme(rc={"figure.figsize":(6, 3)})
+    ax = sns.barplot(x='readmitted', y='readmitted', estimator=lambda x: len(x) / len(data) * 100, data=data, hue="readmitted", legend=False)
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%.f%%')
+    ax.set_ylabel('Percentage (%)')
+    sns.set_theme(rc={"figure.figsize":(10, 7)})
     plt.show()
 
 def main():
