@@ -32,6 +32,21 @@ def data_visualisation(data):
     sns.set_theme(rc={"figure.figsize":(10, 7)})
     plt.show()
 
+    # count of number of readmitted cases against age
+    print("\nCount of number of readmitted cases against age:\n")
+    ax2 = sns.countplot(x="age", data=data, hue="readmitted", legend=False)
+    
+    for container in ax2.containers:
+        ax2.bar_label(container)
+
+    h,l = ax2.get_legend_handles_labels()
+    target_unique_classes = data['readmitted'].value_counts().index;
+    ax2.legend(h, labels=target_unique_classes, title="readmitted", loc="upper right")
+    
+    sns.set_theme(rc={"figure.figsize":(10, 7)})
+    plt.xticks(ticks=range(10), rotation=45, ha='right')
+    plt.show()
+
 def main():
     data = pd.read_csv('diabetic_data.csv')
 
