@@ -3,28 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
-def remove_outliers(df):
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                  'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
-    for col in numerical_cols:
-        Q1 = df[col].quantile(0.25)
-        Q3 = df[col].quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
-    return df
-
-def feature_normalization(df):
-    scaler = MinMaxScaler()
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
-    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
-    return df
-
-def main():
-    data = pd.read_csv('diabetic_data.csv')
-
+def process_data(data):
     print("Shape of the data:\n", data.shape)
     
     data.drop('encounter_id', axis=1, inplace=True)
@@ -58,9 +37,45 @@ def main():
     
     print("\nSummary statistics of numerical columns:\n", data.describe())
     
+    return data
+
+def remove_outliers(df, numerical_cols, threshold=1.5, iterative=False):
+    while True:
+        initial_shape = df.shape
+        for col in numerical_cols:
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - threshold * IQR
+            upper_bound = Q3 + threshold * IQR
+            df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
+        
+        if not iterative or df.shape == initial_shape:
+            break
+
+    return df
+
+def feature_normalization(df):
+    scaler = MinMaxScaler()
+    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
+                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+    return df
+
+def main():
+    data = pd.read_csv('diabetic_data.csv')
+    data = process_data(data)
     # Removing outliers
-    data = remove_outliers(data)
-    
+    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
+                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    data = remove_outliers(data, numerical_cols, threshold=1.5, iterative=True)
+    plt.figure(figsize=(20, 10))
+    for i, col in enumerate(numerical_cols, 1):
+        plt.subplot(2, 4, i)
+        data.boxplot(col)
+        plt.title(col)
+    plt.tight_layout()
+    plt.show()
     # Feature normalization
     data = feature_normalization(data)
     
