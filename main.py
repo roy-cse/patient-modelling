@@ -39,20 +39,14 @@ def process_data(data):
     
     return data
 
-def remove_outliers(df, numerical_cols, threshold=1.5, iterative=False):
-    while True:
-        initial_shape = df.shape
-        for col in numerical_cols:
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            lower_bound = Q1 - threshold * IQR
-            upper_bound = Q3 + threshold * IQR
-            df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
-        
-        if not iterative or df.shape == initial_shape:
-            break
-
+def remove_outliers(df, numerical_cols, threshold=1.5):
+    for col in numerical_cols:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - threshold * IQR
+        upper_bound = Q3 + threshold * IQR
+        df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
     return df
 
 def feature_normalization(df):
@@ -68,7 +62,7 @@ def main():
     # Removing outliers
     numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
                       'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
-    data = remove_outliers(data, numerical_cols, threshold=1.5, iterative=True)
+    data = remove_outliers(data, numerical_cols, threshold=1.5)
     plt.figure(figsize=(20, 10))
     for i, col in enumerate(numerical_cols, 1):
         plt.subplot(2, 4, i)
