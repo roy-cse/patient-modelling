@@ -4,15 +4,49 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
 
-def remove_outliers(df):
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                  'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+def process_data(data):
+    print("Shape of the data:\n", data.shape)
+    
+    data.drop('encounter_id', axis=1, inplace=True)
+    
+    missing_values_before = data.isnull().sum()
+    print("\nSummary of missing values before replace:\n", missing_values_before)
+    
+    data.replace('?', np.nan, inplace=True)
+
+    missing_values_after = data.isnull().sum()
+    print("\nSummary of missing values after replace:\n", missing_values_after)
+
+    data['readmitted'] = data['readmitted'].map({'<30': 1, '>30': 0, 'NO': 0})
+    
+    print("\nData types of each column:\n", data.dtypes)
+
+    missing_percent = data.isnull().mean() * 100
+    
+    columns_to_drop = missing_percent[missing_percent > 90].index
+    data.drop(columns=columns_to_drop, inplace=True)
+    
+    columns_to_delete = [
+        'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride', 'acetohexamide',
+        'tolbutamide', 'acarbose', 'miglitol', 'troglitazone', 'tolazamide', 'examide',
+        'citoglipton', 'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone',
+        'metformin-rosiglitazone', 'metformin-pioglitazone', 'payer_code', 'patient_nbr']
+
+    data.drop(columns=columns_to_delete, inplace=True)
+    
+    data.dropna(axis=0, how='all', inplace=True)
+    
+    print("\nSummary statistics of numerical columns:\n", data.describe())
+    
+    return data
+
+def remove_outliers(df, numerical_cols, threshold=1.5):
     for col in numerical_cols:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)
         IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
+        lower_bound = Q1 - threshold * IQR
+        upper_bound = Q3 + threshold * IQR
         df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
     return df
 
@@ -49,43 +83,18 @@ def data_visualisation(data):
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
-
-    print("Shape of the data:\n", data.shape)
-    
-    data.drop('encounter_id', axis=1, inplace=True)
-    
-    missing_values_before = data.isnull().sum()
-    print("\nSummary of missing values before replace:\n", missing_values_before)
-    
-    data.replace('?', np.nan, inplace=True)
-
-    missing_values_after = data.isnull().sum()
-    print("\nSummary of missing values after replace:\n", missing_values_after)
-
-    data['readmitted'] = data['readmitted'].map({'<30': 1, '>30': 0, 'NO': 0})
-    
-    print("\nData types of each column:\n", data.dtypes)
-
-    missing_percent = data.isnull().mean() * 100
-    
-    columns_to_drop = missing_percent[missing_percent > 90].index
-    data.drop(columns=columns_to_drop, inplace=True)
-    
-    columns_to_delete = [
-        'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride', 'acetohexamide',
-        'tolbutamide', 'acarbose', 'miglitol', 'troglitazone', 'tolazamide', 'examide',
-        'citoglipton', 'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone',
-        'metformin-rosiglitazone', 'metformin-pioglitazone', 'payer_code', 'patient_nbr']
-
-    data.drop(columns=columns_to_delete, inplace=True)
-    
-    data.dropna(axis=0, how='all', inplace=True)
-    
-    print("\nSummary statistics of numerical columns:\n", data.describe())
-    
+    data = process_data(data)
     # Removing outliers
-    data = remove_outliers(data)
-    
+    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
+                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    data = remove_outliers(data, numerical_cols, threshold=1.5)
+    plt.figure(figsize=(20, 10))
+    for i, col in enumerate(numerical_cols, 1):
+        plt.subplot(2, 4, i)
+        data.boxplot(col)
+        plt.title(col)
+    plt.tight_layout()
+    plt.show()
     # Feature normalization
     data = feature_normalization(data)
     
