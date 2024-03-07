@@ -52,15 +52,8 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
 
 def feature_normalization(df, numerical_cols):
     scaler = MinMaxScaler()    
-    # Store original 'num_medications' values
-    num_medications_original = df['num_medications'].copy()
-    
     # Normalize numerical columns
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
-    
-    # Assign back the original 'num_medications' values
-    df['num_medications'] = num_medications_original
-    
     return df
 
 def data_visualisation(data):
@@ -107,8 +100,11 @@ def main():
     data = pd.read_csv('diabetic_data.csv')
     data = process_data(data)
     
+    target_var = 'readmitted'
     # Removing outliers
     numerical_cols = data.select_dtypes(include=['int']).columns
+    # Exclude a particular column
+    numerical_cols = numerical_cols.drop(target_var)
     data = remove_outliers(data, numerical_cols, threshold=1.5)
 
     # Feature normalization
