@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+import seaborn as sns
 
 def process_data(data):
     print("Shape of the data:\n", data.shape)
@@ -53,29 +54,84 @@ def feature_normalization(df):
     scaler = MinMaxScaler()
     numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
                       'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    
+    # Store original 'num_medications' values
+    num_medications_original = df['num_medications'].copy()
+    
+    # Normalize numerical columns
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+    
+    # Assign back the original 'num_medications' values
+    df['num_medications'] = num_medications_original
+    
     return df
+
+def data_visualisation(data):
+    # distribution of unique classes of the target variable
+    ax = sns.barplot(x='readmitted', y='readmitted', estimator=lambda x: len(x) / len(data) * 100, 
+                     data=data, hue="readmitted", legend=False)
+    
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%.f%%')
+
+    ax.set_ylabel('Percentage (%)')
+    sns.set_theme(rc={"figure.figsize":(10, 7)})
+    plt.show()
+
+    # count of number of readmitted cases against age
+    print("\nCount of number of readmitted cases against age:\n")
+    value_counts = data.groupby('age')['readmitted'].value_counts().unstack()
+
+    fig, ax3 = plt.subplots()
+    bars = ax3.bar(data["age"].unique(), value_counts[1])
+    ax3.bar_label(bars)
+    
+    plt.xlabel("Age Groups")
+    plt.ylabel("Readmitted Cases")
+    plt.title("Count of number of readmitted cases against age")
+    plt.show()
+
+    # count of target variable against the number of medications
+    print("\nCount of target variable against the number of medications:\n")
+    ax2 = sns.countplot(x="num_medications", data=data, hue="readmitted", legend=False)
+    
+    for container in ax2.containers:
+        ax2.bar_label(container)
+
+    ax2.get_legend_handles_labels()
+    target_unique_classes = data['readmitted'].value_counts().index
+    ax2.legend(labels=target_unique_classes, title="readmitted", loc="upper right")
+    
+    sns.set_theme(rc={"figure.figsize":(10, 7)})
+    plt.xticks(rotation=45, ha='right')
+    plt.show()
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
     data = process_data(data)
+    
     # Removing outliers
     numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
                       'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
     data = remove_outliers(data, numerical_cols, threshold=1.5)
-    plt.figure(figsize=(20, 10))
-    for i, col in enumerate(numerical_cols, 1):
-        plt.subplot(2, 4, i)
-        data.boxplot(col)
-        plt.title(col)
-    plt.tight_layout()
-    plt.show()
+
+    # plt.figure(figsize=(20, 10))
+    # for i, col in enumerate(numerical_cols, 1):
+    #     plt.subplot(2, 4, i)
+    #     data.boxplot(col)
+    #     plt.title(col)
+    # plt.tight_layout()
+    # plt.show()
+
     # Feature normalization
     data = feature_normalization(data)
     
     print("\nFinal shape of the data:\n", data.shape)
 
     # data.to_csv('processed_data.csv', index=False)
+
+    # Data Visualisation
+    data_visualisation(data)
 
 if __name__ == '__main__':
     main()
