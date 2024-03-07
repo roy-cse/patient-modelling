@@ -49,10 +49,8 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
         df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
     return df
 
-def feature_normalization(df):
+def feature_normalization(df, numerical_cols):
     scaler = MinMaxScaler()
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
@@ -60,8 +58,7 @@ def main():
     data = pd.read_csv('diabetic_data.csv')
     data = process_data(data)
     # Removing outliers
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    numerical_cols = data.select_dtypes(include=['int']).columns
     data = remove_outliers(data, numerical_cols, threshold=1.5)
     plt.figure(figsize=(20, 10))
     for i, col in enumerate(numerical_cols, 1):
@@ -71,7 +68,7 @@ def main():
     plt.tight_layout()
     plt.show()
     # Feature normalization
-    data = feature_normalization(data)
+    data = feature_normalization(data, numerical_cols)
     
     print("\nFinal shape of the data:\n", data.shape)
 
