@@ -105,7 +105,6 @@ def main():
     numerical_cols = data.select_dtypes(include=['int']).columns
     # Exclude a particular column
     numerical_cols = numerical_cols.drop(target_var)
-    print("\nNumerical columns:\n", numerical_cols)
     data = remove_outliers(data, numerical_cols, threshold=1.5)
 
     # Feature normalization
