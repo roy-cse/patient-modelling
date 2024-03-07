@@ -68,17 +68,15 @@ def data_visualisation(data):
 
     # count of number of readmitted cases against age
     print("\nCount of number of readmitted cases against age:\n")
-    ax2 = sns.countplot(x="age", data=data, hue="readmitted", legend=False)
-    
-    for container in ax2.containers:
-        ax2.bar_label(container)
+    value_counts = data.groupby('age')['readmitted'].value_counts().unstack()
 
-    h,l = ax2.get_legend_handles_labels()
-    target_unique_classes = data['readmitted'].value_counts().index;
-    ax2.legend(h, labels=target_unique_classes, title="readmitted", loc="upper right")
+    fig, ax3 = plt.subplots()
+    bars = ax3.bar(data["age"].unique(), value_counts[1])
+    ax3.bar_label(bars)
     
-    sns.set_theme(rc={"figure.figsize":(10, 7)})
-    plt.xticks(ticks=range(10), rotation=45, ha='right')
+    plt.xlabel("Age Groups")
+    plt.ylabel("Readmitted Cases")
+    plt.title("Count of number of readmitted cases against age")
     plt.show()
 
 def main():
