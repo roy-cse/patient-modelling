@@ -50,11 +50,8 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
         df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
     return df
 
-def feature_normalization(df):
-    scaler = MinMaxScaler()
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
-    
+def feature_normalization(df, numerical_cols):
+    scaler = MinMaxScaler()    
     # Store original 'num_medications' values
     num_medications_original = df['num_medications'].copy()
     
@@ -111,20 +108,11 @@ def main():
     data = process_data(data)
     
     # Removing outliers
-    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 
-                      'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    numerical_cols = data.select_dtypes(include=['int']).columns
     data = remove_outliers(data, numerical_cols, threshold=1.5)
 
-    # plt.figure(figsize=(20, 10))
-    # for i, col in enumerate(numerical_cols, 1):
-    #     plt.subplot(2, 4, i)
-    #     data.boxplot(col)
-    #     plt.title(col)
-    # plt.tight_layout()
-    # plt.show()
-
     # Feature normalization
-    data = feature_normalization(data)
+    data = feature_normalization(data, numerical_cols)
     
     print("\nFinal shape of the data:\n", data.shape)
 
