@@ -53,12 +53,19 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
     return df
 
 def feature_normalization(df, numerical_cols):
-    scaler = MinMaxScaler()    
-    # Normalize numerical columns
-    # TODO: Check which numerical cols need to be normalized
+    scaler = MinMaxScaler()
     categorical_cols = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id']
-    df.drop(columns=categorical_cols, inplace=True)
+    
+    # Save categorical columns data
+    categorical_data = df[categorical_cols]
+    
+    # Drop categorical columns
+    df = df.drop(columns=categorical_cols)
+    
+    # Normalize numerical columns
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+    for col in categorical_cols:
+        df[col] = categorical_data[col]
     return df
 
 def data_visualisation(data):
