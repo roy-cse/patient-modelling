@@ -53,21 +53,17 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
     return df
 
 def feature_normalization(df, numerical_cols):
+    # List of columns to exclude from normalization
+    cols_to_exclude = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id','number_outpatient', 'number_emergency', 'number_inpatient', 'patient_nbr']
+    # Exclude specified columns from the list of numerical columns to normalize
+    cols_to_normalize = [col for col in numerical_cols if col not in cols_to_exclude]
+    print("\nColumns to normalize:\n", cols_to_normalize)    
+    # Normalize numerical columns
+    # TODO: Check which numerical cols need to be normalized    
     scaler = MinMaxScaler()
-    # Normalize numerical columns
-    # TODO: Check which numerical cols need to be normalized
-    categorical_cols = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id']
-    
-    # Save categorical columns data
-    categorical_data = df[categorical_cols]
-    
-    # Drop categorical columns
-    df = df.drop(columns=categorical_cols)
-    
-    # Normalize numerical columns
-    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
-    for col in categorical_cols:
-        df[col] = categorical_data[col]
+    print('11111111111111111111111111111',df.loc[:, ['patient_nbr','number_outpatient', 'number_emergency', 'number_inpatient']].head(100))
+    # Normalize only the columns that are not excluded
+    df[cols_to_normalize] = scaler.fit_transform(df[cols_to_normalize])
     return df
 
 def data_visualisation(data):
