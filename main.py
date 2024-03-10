@@ -26,16 +26,18 @@ def process_data(data):
     columns_to_drop = missing_percent[missing_percent > 90].index
     data.drop(columns=columns_to_drop, inplace=True)
     
+    # TODO: Drop columns such as payer_code, patient_nbr
     columns_to_delete = [
         'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride', 'acetohexamide',
         'tolbutamide', 'acarbose', 'miglitol', 'troglitazone', 'tolazamide', 'examide',
         'citoglipton', 'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone',
-        'metformin-rosiglitazone', 'metformin-pioglitazone', 'payer_code', 'patient_nbr']
+        'metformin-rosiglitazone', 'metformin-pioglitazone']
 
     data.drop(columns=columns_to_delete, inplace=True)
     
-    data.dropna(axis=0, how='all', inplace=True)
-    
+    data.dropna(axis=0, how='any', inplace=True)
+    # TODO: Check if A1CResult plays a major role in predicting the target variable 
+    # TODO: Check if removed column values can be replaced with mean or mode
     print("\nSummary statistics of numerical columns:\n", data.describe())
     
     return data
@@ -53,6 +55,7 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
 def feature_normalization(df, numerical_cols):
     scaler = MinMaxScaler()    
     # Normalize numerical columns
+    # TODO: Check which numerical cols need to be normalized
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
@@ -69,6 +72,8 @@ def data_visualisation(data):
     plt.show()
 
     # count of number of readmitted cases against age
+
+    # TODO: Check if categorical data can be converted to numerical data
     print("\nCount of number of readmitted cases against age:\n")
     value_counts = data.groupby('age')['readmitted'].value_counts().unstack()
 
@@ -102,11 +107,10 @@ def main():
     
     target_var = 'readmitted'
     # Removing outliers
-    numerical_cols = data.select_dtypes(include=['int']).columns
+    numerical_cols = data.select_dtypes(include='number').columns
     # Exclude a particular column
     numerical_cols = numerical_cols.drop(target_var)
     data = remove_outliers(data, numerical_cols, threshold=1.5)
-
     # Feature normalization
     data = feature_normalization(data, numerical_cols)
     
