@@ -56,6 +56,8 @@ def feature_normalization(df, numerical_cols):
     scaler = MinMaxScaler()    
     # Normalize numerical columns
     # TODO: Check which numerical cols need to be normalized
+    categorical_cols = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id']
+    df.drop(columns=categorical_cols, inplace=True)
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
