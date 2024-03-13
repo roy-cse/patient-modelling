@@ -188,11 +188,14 @@ def main():
     data = pd.read_csv('diabetic_data.csv')
     data = process_data(data)
     
-    target_var = 'readmitted'
+    target_var = ['readmitted']
+    # Not removing outliers from these columns
+    non_outlier_cols = ['number_outpatient', 'number_emergency', 'number_inpatient']
     # Removing outliers
     numerical_cols = data.select_dtypes(include='number').columns
     # Exclude a particular column
     numerical_cols = numerical_cols.drop(target_var)
+    numerical_cols = numerical_cols.drop(non_outlier_cols)
     data = remove_outliers(data, numerical_cols, threshold=1.5)
     # Feature normalization
     data = feature_normalization(data, numerical_cols)
