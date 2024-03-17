@@ -174,15 +174,7 @@ def plot_avg_lab_procedures_by_race(data):
     plt.title('Average Number of Lab Procedures by Race')
     plt.xticks(rotation=45)
     plt.show()
-def plot_age_frequency(data):
-    # Bar chart of age group frequency
-    age_group_counts = data['age'].value_counts().reset_index()
-    age_group_counts.columns = ['age', 'count']
-    age_group_counts.sort_values('age', inplace=True)
-    sns.barplot(data=age_group_counts, x='age', y='count')
-    plt.title('Frequency of Each Age Group')
-    plt.xticks(rotation=45)
-    plt.show()
+
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
