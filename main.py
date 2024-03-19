@@ -59,7 +59,7 @@ def feature_normalization(df, numerical_cols):
     df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
-def data_visualisation(data):
+def data_visualisation(data, categorical_int_cols):
     # distribution of unique classes of the target variable
     ax = sns.barplot(x='readmitted', y='readmitted', estimator=lambda x: len(x) / len(data) * 100, 
                      data=data, hue="readmitted", legend=False)
@@ -72,7 +72,6 @@ def data_visualisation(data):
     plt.show()
 
     # count of number of readmitted cases against age
-
     value_counts = data.sort_values('age').groupby('age')['readmitted'].value_counts().unstack()    
     fig, ax3 = plt.subplots()
 
@@ -101,18 +100,10 @@ def data_visualisation(data):
 
     # Creating a new DataFrame with only the specified numerical columns
     num_df = data.select_dtypes(include='number')
-    print(num_df.dtypes)
-
-    num_df.drop(['admission_type_id','discharge_disposition_id','admission_source_id','number_outpatient','number_emergency','number_inpatient'], axis=1, inplace=True)
-
+    num_df.drop(categorical_int_cols, axis=1, inplace=True)
 
     plot_correlation_matrix(num_df)
     plot_scatter_matrix(num_df)
-
-    plot_avg_lab_procedures_by_race(data)
-
-    print(num_df.dtypes)
-    print(data.dtypes)
 
 
 def plot_scatter_matrix(num_df):
@@ -164,15 +155,7 @@ def plot_avg_lab_procedures_by_race(data):
     plt.title('Average Number of Lab Procedures by Race')
     plt.xticks(rotation=45)
     plt.show()
-def plot_age_frequency(data):
-    # Bar chart of age group frequency
-    age_group_counts = data['age'].value_counts().reset_index()
-    age_group_counts.columns = ['age', 'count']
-    age_group_counts.sort_values('age', inplace=True)
-    sns.barplot(data=age_group_counts, x='age', y='count')
-    plt.title('Frequency of Each Age Group')
-    plt.xticks(rotation=45)
-    plt.show()
+
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
@@ -207,7 +190,7 @@ def main():
     # data.to_csv('processed_data.csv', index=False)
 
     # Data Visualisation
-    data_visualisation(data)
+    data_visualisation(data, categorical_int_cols)
 
 if __name__ == '__main__':
     main()
