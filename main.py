@@ -26,12 +26,12 @@ def process_data(data):
     columns_to_drop = missing_percent[missing_percent > 90].index
     data.drop(columns=columns_to_drop, inplace=True)
     
-    # TODO: Drop columns such as payer_code, patient_nbr
+    # Dropping cols such as payer_code and medical_specialty since they don't play a major role in predicting the target variable
     columns_to_delete = [
         'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride', 'acetohexamide',
         'tolbutamide', 'acarbose', 'miglitol', 'troglitazone', 'tolazamide', 'examide',
         'citoglipton', 'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone',
-        'metformin-rosiglitazone', 'metformin-pioglitazone']
+        'metformin-rosiglitazone', 'metformin-pioglitazone', 'payer_code', 'medical_specialty']
 
     data.drop(columns=columns_to_delete, inplace=True)
     
@@ -53,20 +53,13 @@ def remove_outliers(df, numerical_cols, threshold=1.5):
     return df
 
 def feature_normalization(df, numerical_cols):
-    # List of columns to exclude from normalization
-    cols_to_exclude = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id','number_outpatient', 'number_emergency', 'number_inpatient', 'patient_nbr']
     # Exclude specified columns from the list of numerical columns to normalize
-    cols_to_normalize = [col for col in numerical_cols if col not in cols_to_exclude]
-    print("\nColumns to normalize:\n", cols_to_normalize)    
-    # Normalize numerical columns
-    # TODO: Check which numerical cols need to be normalized    
     scaler = MinMaxScaler()
-    print('11111111111111111111111111111',df.loc[:, ['patient_nbr','number_outpatient', 'number_emergency', 'number_inpatient']].head(100))
     # Normalize only the columns that are not excluded
-    df[cols_to_normalize] = scaler.fit_transform(df[cols_to_normalize])
+    df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
     return df
 
-def data_visualisation(data):
+def data_visualisation(data, categorical_int_cols):
     # distribution of unique classes of the target variable
     ax = sns.barplot(x='readmitted', y='readmitted', estimator=lambda x: len(x) / len(data) * 100, 
                      data=data, hue="readmitted", legend=False)
@@ -79,13 +72,10 @@ def data_visualisation(data):
     plt.show()
 
     # count of number of readmitted cases against age
-
-    # TODO: Check if categorical data can be converted to numerical data
-    print("\nCount of number of readmitted cases against age:\n")
-    value_counts = data.groupby('age')['readmitted'].value_counts().unstack()
-
+    value_counts = data.sort_values('age').groupby('age')['readmitted'].value_counts().unstack()    
     fig, ax3 = plt.subplots()
-    bars = ax3.bar(data["age"].unique(), value_counts[1])
+
+    bars = ax3.bar(value_counts.index, value_counts[1])
     ax3.bar_label(bars)
     
     plt.xlabel("Age Groups")
@@ -94,7 +84,6 @@ def data_visualisation(data):
     plt.show()
 
     # count of target variable against the number of medications
-    print("\nCount of target variable against the number of medications:\n")
     ax2 = sns.countplot(x="num_medications", data=data, hue="readmitted", legend=False)
     
     for container in ax2.containers:
@@ -111,18 +100,10 @@ def data_visualisation(data):
 
     # Creating a new DataFrame with only the specified numerical columns
     num_df = data.select_dtypes(include='number')
-    print(num_df.dtypes)
-
-    num_df.drop(['admission_type_id','discharge_disposition_id','admission_source_id','number_outpatient','number_emergency','number_inpatient'], axis=1, inplace=True)
-
+    num_df.drop(categorical_int_cols, axis=1, inplace=True)
 
     plot_correlation_matrix(num_df)
     plot_scatter_matrix(num_df)
-
-    plot_avg_lab_procedures_by_race(data)
-
-    print(num_df.dtypes)
-    print(data.dtypes)
 
 
 def plot_scatter_matrix(num_df):
@@ -174,38 +155,42 @@ def plot_avg_lab_procedures_by_race(data):
     plt.title('Average Number of Lab Procedures by Race')
     plt.xticks(rotation=45)
     plt.show()
-def plot_age_frequency(data):
-    # Bar chart of age group frequency
-    age_group_counts = data['age'].value_counts().reset_index()
-    age_group_counts.columns = ['age', 'count']
-    age_group_counts.sort_values('age', inplace=True)
-    sns.barplot(data=age_group_counts, x='age', y='count')
-    plt.title('Frequency of Each Age Group')
-    plt.xticks(rotation=45)
-    plt.show()
+
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
     data = process_data(data)
-    
+    print('The shape of the data after processing:', data.shape)
     target_var = ['readmitted']
-    # Not removing outliers from these columns
-    non_outlier_cols = ['number_outpatient', 'number_emergency', 'number_inpatient']
+    print('The numerical cols are:', data.select_dtypes(include='number').columns.values)
+   
+    # Not removing outliers from these columns since they are categorical types
+
+    categorical_int_cols = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id']
+   
+   # Not removing outliers from these columns since values are inside 3 standard deviations
+    non_outlier_cols = ['number_outpatient', 'number_emergency', 'number_inpatient', 'time_in_hospital', 'num_procedures', 'patient_nbr']
+
+    final_non_outlier_cols = target_var + categorical_int_cols + non_outlier_cols
+
+    print("\nColumns that are not outliers:\n", final_non_outlier_cols)
+    
     # Removing outliers
     numerical_cols = data.select_dtypes(include='number').columns
-    # Exclude a particular column
-    numerical_cols = numerical_cols.drop(target_var)
-    numerical_cols = numerical_cols.drop(non_outlier_cols)
+    # Exclude the non-outlier columns
+    numerical_cols = numerical_cols.drop(final_non_outlier_cols)
+
+    print('\n Dropping outliers from: ', numerical_cols.values)
     data = remove_outliers(data, numerical_cols, threshold=1.5)
-    # Feature normalization
-    data = feature_normalization(data, numerical_cols)
-    
+
+    # We are not performing normalisation on any of the columns since the range of the values for every feature has insignificant difference
+    # feature_normalization(data, numerical_cols)
     print("\nFinal shape of the data:\n", data.shape)
 
     # data.to_csv('processed_data.csv', index=False)
 
     # Data Visualisation
-    data_visualisation(data)
+    data_visualisation(data, categorical_int_cols)
 
 if __name__ == '__main__':
     main()
