@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import seaborn as sns
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
 
 def process_data(data):
     print("Shape of the data:\n", data.shape)
@@ -156,9 +159,49 @@ def plot_avg_lab_procedures_by_race(data):
     plt.xticks(rotation=45)
     plt.show()
 
+def improved_model(data):
+    data.replace('?', np.nan, inplace=True)
+    columns_to_delete=['encounter_id','patient_nbr','admission_type_id','discharge_disposition_id','admission_source_id']
+    num_cols_for_filling=data.select_dtypes(include='number').drop(columns=columns_to_delete).columns.values
+    print('cols',num_cols_for_filling)
+
+    # FutureWarning: A value is trying to be set on a copy of a DataFrame or Series through chained assignment using an inplace method.
+    # The behavior will change in pandas 3.0. This inplace method will never work because the intermediate object on which we are setting values always behaves as a copy.
+    # For example, when doing 'df[col].method(value, inplace=True)', try using 'df.method({col: value}, inplace=True)' or df[col] = df[col].method(value) instead, to perform the operation inplace on the original object.
+
+    for column in num_cols_for_filling:
+        data[column].fillna(data[column].mean(), inplace=True)
+
+    new_df_for_clusters=data[['num_lab_procedures','num_procedures']]
+
+    print("sss",new_df_for_clusters)
+    # features, true_labels = make_blobs(n_samples=[100, 100, 200], centers=None, cluster_std=[0.7, 0.7, 0.7],
+    #                                    random_state=0)
+    plt.scatter(data=new_df_for_clusters,x='num_lab_procedures',y='num_procedures')
+    plt.xlabel('$x_1$')
+    plt.ylabel('$x_2$')
+    plt.show()
+
+    # UserWarning: KMeans is known to have a memory leak on Windows with MKL, when there are less chunks than available threads. You can avoid it by setting the environment variable OMP_NUM_THREADS=2.
+    new_df_for_clusters=new_df_for_clusters.values
+    kmeans = KMeans(n_clusters=2,init='random',max_iter=100,random_state=10,n_init='auto')
+    kmeans.fit(new_df_for_clusters)
+    plt.scatter(new_df_for_clusters[kmeans.labels_ == 0, 0], new_df_for_clusters[kmeans.labels_ == 0, 1])
+    plt.scatter(new_df_for_clusters[kmeans.labels_ == 1, 0], new_df_for_clusters[kmeans.labels_ == 1, 1])
+
+    plt.scatter(kmeans.cluster_centers_[0][0],kmeans.cluster_centers_[0][1],c='red',marker='x')
+    plt.scatter(kmeans.cluster_centers_[1][0],kmeans.cluster_centers_[1][1],c='blue',marker='x')
+
+    plt.xlabel('$x_1$')
+    plt.ylabel('$x_2$')
+    plt.show()
+
+    print("son",data.isnull().sum())
+    print("print",data['number_inpatient'].to_string())
 
 def main():
     data = pd.read_csv('diabetic_data.csv')
+    improved_model(data)
     data = process_data(data)
     print('The shape of the data after processing:', data.shape)
     target_var = ['readmitted']
@@ -190,7 +233,7 @@ def main():
     # data.to_csv('processed_data.csv', index=False)
 
     # Data Visualisation
-    data_visualisation(data, categorical_int_cols)
+    # data_visualisation(data, categorical_int_cols)
 
 if __name__ == '__main__':
     main()
