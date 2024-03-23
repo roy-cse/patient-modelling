@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
 from sklearn.feature_selection import RFE
@@ -243,6 +245,141 @@ def balance_data_oversampling(data):
     
     return df_upsampled
 
+def process_data_v2(data):
+    print("Shape of the data:\n", data.shape)
+    
+    data.drop_duplicates(subset=['patient_nbr'], keep='last', inplace=True)
+    print(data.shape)
+    
+    columns_to_delete = [
+        'repaglinide', 'nateglinide', 'chlorpropamide', 'glimepiride', 'acetohexamide',
+        'tolbutamide', 'acarbose', 'miglitol', 'troglitazone', 'tolazamide', 'examide',
+        'citoglipton', 'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone',
+        'metformin-rosiglitazone', 'metformin-pioglitazone', 'payer_code', 'weight', 'medical_specialty', 'encounter_id', 'max_glu_serum']
+    data.drop(columns=columns_to_delete, inplace=True)
+    print(data.shape)
+
+    data.replace('?', np.nan, inplace=True)
+    data.replace('Unknown/Invalid', np.nan, inplace=True)
+    # Fetching all the values of the columns
+    data['discharge_disposition_id'].unique()
+    
+    not_alive_patients = data[data['discharge_disposition_id'].isin([11, 19, 20, 21])].index
+    # Dropping the identified rows in place
+    data.drop(index=not_alive_patients, inplace=True)
+    print(data.shape)
+
+    # Remapping it again to 0 and 1
+    data['readmitted'] = data['readmitted'].map({'<30': 1, '>30': 0, 'NO': 0})
+    
+    data['gender'].value_counts()
+
+    # # Dropping since only 3 rows have unknown
+    data.drop(data[data['gender']=='Unknown/Invalid'].index, inplace=True)
+    print(data.shape)
+
+    # Changing age to the mean value instead of the range
+    data.loc[(data[data['age'] =='[0-10)'].index), 'age'] = 5
+    data.loc[(data[data['age'] =='[10-20)'].index), 'age'] = 15
+    data.loc[(data[data['age'] =='[20-30)'].index), 'age'] = 25
+    data.loc[(data[data['age'] =='[30-40)'].index), 'age'] = 35
+    data.loc[(data[data['age'] =='[40-50)'].index), 'age'] = 45
+    data.loc[(data[data['age'] =='[50-60)'].index), 'age'] = 55
+    data.loc[(data[data['age'] =='[60-70)'].index), 'age'] = 65
+    data.loc[(data[data['age'] =='[70-80)'].index), 'age'] = 75
+    data.loc[(data[data['age'] =='[80-90)'].index), 'age'] = 85
+    data.loc[(data[data['age'] =='[90-100)'].index), 'age'] = 95
+
+
+    data['race'].dropna(inplace=True)
+    print(data.shape)
+
+    # Draw box plot for numerical columns
+    numerical_cols = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 'number_outpatient', 'number_emergency', 'number_inpatient', 'number_diagnoses']
+    # for col in numerical_cols:
+    #     sns.boxplot(data[col])
+    #     plt.show()
+    
+    print(data.shape)
+
+    print(data.columns.values)
+
+    for column in ['diag_1', 'diag_2', 'diag_3']:
+        # Ensure the column is of type string for string operations
+        data[column] = data[column].astype(str)
+        
+        # Apply the categorization logic to each column
+        data[column] = np.select(
+            [
+                data[column].str.contains('V') | data[column].str.contains('E'),
+                data[column].str.contains('250'),
+                ((pd.to_numeric(data[column], errors='coerce').between(390, 459)) | (pd.to_numeric(data[column], errors='coerce') == 785)),
+                ((pd.to_numeric(data[column], errors='coerce').between(460, 519)) | (pd.to_numeric(data[column], errors='coerce') == 786)),
+                ((pd.to_numeric(data[column], errors='coerce').between(520, 579)) | (pd.to_numeric(data[column], errors='coerce') == 787)),
+                ((pd.to_numeric(data[column], errors='coerce').between(580, 629)) | (pd.to_numeric(data[column], errors='coerce') == 788)),
+                pd.to_numeric(data[column], errors='coerce').between(140, 239),
+                pd.to_numeric(data[column], errors='coerce').between(710, 739),
+                pd.to_numeric(data[column], errors='coerce').between(800, 999),
+            ], 
+            [
+                'Other', 'Diabetes', 'Circulatory', 'Respiratory', 
+                'Digestive', 'Genitourinary', 'Neoplasms', 
+                'Musculoskeletal', 'Injury'
+            ], 
+            default='Other'
+        )
+    print("Before removing outliers:", data.shape)
+    outlier_cols = ['time_in_hospital', 'num_procedures', 'num_medications', 'number_diagnoses', 'num_lab_procedures']
+    data = remove_outliers(data, outlier_cols)
+    print("After removing outliers:", data.shape)
+    normalization_columns = ['time_in_hospital', 'num_lab_procedures', 'num_procedures', 'num_medications', 'number_diagnoses', 'number_outpatient', 'number_emergency', 'number_inpatient']
+    data = feature_normalization(data, normalization_columns)
+
+    # Transform the categorical columns into dummy variables
+    cat_cols = ['race', 'gender', 'age', 'admission_type_id' , 'discharge_disposition_id', 'admission_source_id', 'diag_1',
+ 'diag_2', 'diag_3', 'A1Cresult', 'metformin', 'glipizide', 'glyburide', 'pioglitazone', 'rosiglitazone', 'insulin', 'change', 'diabetesMed']
+    data = pd.get_dummies(data, columns=cat_cols, drop_first=True)
+    return data
+
+# Function to determine optimal clusters using the Elbow Method
+def determine_optimal_clusters(df, max_k=10):
+    ssd = []  # Sum of squared distances
+    range_k = range(1, max_k + 1)
+    for k in range_k:
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        kmeans.fit(df)
+        ssd.append(kmeans.inertia_)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(range_k, ssd, 'bx-')
+    plt.xlabel('k (Number of Clusters)')
+    plt.ylabel('Sum of Squared Distances')
+    plt.title('Elbow Method For Optimal k')
+    plt.show()
+
+# Function to perform K-Means clustering and visualize the results
+def cluster_and_visualize(df, n_clusters):
+    # Assuming df is ready for clustering (i.e., numerical and normalized)
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    clusters = kmeans.fit_predict(df)
+    
+    df['Cluster'] = clusters  # Append cluster assignments to df
+    
+    # Dimensionality reduction for visualization
+    pca = PCA(n_components=2)
+    principal_components = pca.fit_transform(df.drop('Cluster', axis=1))
+    
+    pca_df = pd.DataFrame(data=principal_components, columns=['PC1', 'PC2'])
+    pca_df['Cluster'] = clusters  # Add cluster information for plotting
+    
+    # Plotting
+    plt.figure(figsize=(10, 7))
+    sns.scatterplot(x='PC1', y='PC2', hue='Cluster', data=pca_df, palette='bright', legend='full')
+    plt.title('Clusters Visualized After PCA Reduction')
+    plt.show()
+
+    return df
+
 def main():
     data = pd.read_csv('diabetic_data.csv')
     data = process_data(data)
@@ -290,6 +427,23 @@ def main():
     print(results)
 
     # data.to_csv('processed_data.csv', index=False)
+
+    # Building a better model
+
+    data_v2 = pd.read_csv('diabetic_data.csv')
+    data_v2 = process_data_v2(data_v2)
+
+    features_for_clustering = data_v2.drop(['readmitted'], axis=1)  # Exclude target variable if exists
+    
+    # Determine the optimal number of clusters
+    determine_optimal_clusters(features_for_clustering, max_k=10)
+    
+    n_clusters = int(input("Enter the optimal number of clusters based on the elbow plot: "))
+    
+    # Perform K-Means clustering and visualize
+    clustered_data = cluster_and_visualize(features_for_clustering, n_clusters)
+
+    # Further analysis of clustered_data can be performed here
 
 
 if __name__ == '__main__':
