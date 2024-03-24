@@ -11,6 +11,8 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.model_selection import KFold
 from sklearn.utils import resample
+from matplotlib.artist import setp
+
 
 def process_data(data):
     print("Shape of the data:\n", data.shape)
@@ -69,39 +71,41 @@ def feature_normalization(df, numerical_cols):
 
 def data_visualisation(data, categorical_int_cols):
     # distribution of unique classes of the target variable
-    ax = sns.barplot(x='readmitted', y='readmitted', estimator=lambda x: len(x) / len(data) * 100, 
-                     data=data, hue="readmitted", legend=False)
-    
+    readmission_order = [1, 0]
+    readmission_legend_labels = ['Readmitted', 'Non-Readmitted']
+    # TODO Fix Legend (first 2 data for legend are about percentages, you need to skip this)
+    ax = sns.barplot(x='readmitted', y='readmitted', estimator=lambda x: len(x) / len(data) * 100,
+                     data=data, hue='readmitted', order=readmission_order, hue_order=readmission_order)
+
     for container in ax.containers:
         ax.bar_label(container, fmt='%.f%%')
 
     ax.set_ylabel('Percentage (%)')
-    sns.set_theme(rc={"figure.figsize":(10, 7)})
+    ax.set_xlabel('Readmission')
+    # ax.legend(labels = readmission_legend_labels)
     plt.show()
 
     # count of number of readmitted cases against age
-    value_counts = data.sort_values('age').groupby('age')['readmitted'].value_counts().unstack()    
+    value_counts = data.sort_values('age').groupby('age')['readmitted'].value_counts().unstack()
     fig, ax3 = plt.subplots()
 
     bars = ax3.bar(value_counts.index, value_counts[1])
     ax3.bar_label(bars)
-    
+
     plt.xlabel("Age Groups")
     plt.ylabel("Readmitted Cases")
     plt.title("Count of number of readmitted cases against age")
     plt.show()
 
     # count of target variable against the number of medications
-    ax2 = sns.countplot(x="num_medications", data=data, hue="readmitted", legend=False)
-    
+    plt.figure(figsize=(18, 8))
+
+    ax2 = sns.countplot(x="num_medications", data=data, hue="readmitted", hue_order =readmission_order, legend=False)
     for container in ax2.containers:
         ax2.bar_label(container)
-
-    ax2.get_legend_handles_labels()
-    target_unique_classes = data['readmitted'].value_counts().index
-    ax2.legend(labels=target_unique_classes, title="readmitted", loc="upper right")
-    
-    sns.set_theme(rc={"figure.figsize":(10, 7)})
+    ax2.legend(labels=readmission_legend_labels, loc="upper right")
+    plt.xlabel("Number of Medications")
+    plt.ylabel("Number of People Readmitted / Non-Readmitted")
     plt.xticks(rotation=45, ha='right')
     plt.show()
 
@@ -112,24 +116,41 @@ def data_visualisation(data, categorical_int_cols):
 
     plot_correlation_matrix(num_df)
     plot_scatter_matrix(num_df)
-        
-    gender_plot = sns.countplot(x = 'gender', data = data, hue = 'readmitted')
-    gender_plot.figure.set_size_inches(12, 12)
-    gender_plot.legend(title = 'Readmitted', labels = ['No', 'Yes'])
+    plt.figure(figsize=(12, 8))
+
+    gender_plot = sns.countplot(x='gender', data=data, hue='readmitted', hue_order=readmission_order)
+    gender_plot.legend(labels=readmission_legend_labels, loc="upper right")
     gender_plot.axes.set_title('Readmission based on Gender')
+    plt.xlabel("Genders")
+    plt.ylabel("Number of People Readmitted / Non-Readmitted")
     plt.show()
 
+    legend_for_race=["Caucasian","AfricanAmerican","Asian","Hispanic","Other"]
+    legend_for_gender = ["Male", "Female"]
+    fig, ax = plt.subplots(figsize=(12,8), ncols=2, nrows=1)
+    race = sns.countplot(x="race", data=data, ax=ax[0], hue="race", order=legend_for_race, hue_order=legend_for_race)
+    plt.subplots_adjust(bottom=0.25, top=0.9, left=0.15, right=0.85)
+    race.legend(labels=legend_for_race, loc="upper right")
+    gender = sns.countplot(x="gender", data=data, ax=ax[1], hue="gender")
+    gender.legend(labels=legend_for_gender, loc="upper right")
+    ax[0].tick_params(axis="x", rotation=45)
+    ax[1].tick_params(axis="x", rotation=45)
+    gender.set_xlabel("Gender", fontsize=10, weight='bold')
+    race.set_xlabel("Race", fontsize=10, weight='bold')
+    ax[1].xaxis.set_label_coords(0.5, -0.2)
+    plt.subplots_adjust(wspace=1)
 
-    fig, ax = plt.subplots(figsize=(10,15), ncols=1, nrows=3)  # Adjusted for 1 column and 3 rows
-    sns.countplot(x="readmitted", data=data, ax=ax[0])  # Plot 1 in the first row
-    sns.countplot(x="race", data=data, ax=ax[1])        # Plot 2 in the second row
-    sns.countplot(x="gender", data=data, ax=ax[2])      # Plot 3 in the third row
-    plt.tight_layout()  # Adjust the layout to make sure there's no overlap
     plt.show()
 
 def plot_scatter_matrix(num_df):
 
-    pd.plotting.scatter_matrix(num_df, alpha=0.2, figsize=(20, 20), diagonal='kde')
+    axes = pd.plotting.scatter_matrix(num_df, alpha=0.2, figsize=(18, 10), diagonal='kde')
+
+    for ax in axes.flatten():
+        ax.yaxis.label.set_rotation(0)
+        ax.yaxis.label.set_ha('right')
+        setp(ax.get_xticklabels(), rotation=0)
+
     plt.suptitle('Scatter Matrix for Selected Numerical Features')
     plt.show()
 
@@ -139,20 +160,19 @@ def plot_correlation_matrix(num_df):
     corr_matrix= num_df.corr()
 
     # Drop the 'NaN' correlations
-    plt.figure(figsize=(12, 12))
+    fig,ax = plt.subplots(figsize=(15, 8))
+    plt.subplots_adjust(bottom=0.25, top=0.9, left=0.15, right=1)
 
     # Visualisation the correlation matrix
-    sns.heatmap(corr_matrix,annot=True, cmap='coolwarm', vmin=-1, vmax=1)
+    sns.heatmap(corr_matrix,annot=True, cmap='coolwarm', vmin=-1, vmax=1, ax=ax)
     plt.xticks(rotation=45, ha='right')
 
     # Add labels for axes
-    plt.xlabel('Features')
-    plt.ylabel('Features')
+    plt.xlabel("Numerical Features", fontsize=10, weight='bold', labelpad=10)
+    plt.ylabel("Numerical Features", fontsize=10, weight='bold', labelpad=10)
 
-    #TODO add labels to  the xticks
-    plt.title("Correlation matrix")
-    plt.xlabel("Numerical Features")
-    plt.ylabel("Numerical Features")
+    plt.title("Correlation Matrix of Numerical Features", pad=10)
+
     plt.show()
 
     # Threshold for high correlation (can be adjusted)
@@ -164,18 +184,9 @@ def plot_correlation_matrix(num_df):
     highly_correlated_pairs = highly_correlated_pairs[(abs(highly_correlated_pairs) > threshold) & (highly_correlated_pairs < 1)]
 
     # Listing highly correlated pairs
-    print("Highly correlated pairs:\n", highly_correlated_pairs.to_string())
-
-
-
-def plot_avg_lab_procedures_by_race(data):
-    # Bar Chart of Average Number of Lab Procedures by Race
-    average_lab_procedures_by_race = data.groupby('race')['num_lab_procedures'].mean().reset_index()
-    sns.barplot(data=average_lab_procedures_by_race, x="race", y='num_lab_procedures')
-    plt.figure(figsize=(12, 12))
-    plt.title('Average Number of Lab Procedures by Race')
-    plt.xticks(rotation=45)
-    plt.show()
+    print("\nHighly Correlated Pairs:\n")
+    for (idx1, idx2), value in highly_correlated_pairs.items():
+        print(f"{idx1} <-> {idx2}: {value}")
 
 
 def evaluate_model_performance(data):
@@ -415,35 +426,35 @@ def main():
     data_visualisation(data, categorical_int_cols)
     
     # Evaluate model performance
-    results = evaluate_model_performance(data)
-    print(results)
-
-    # Perform oversampling to balance the data
-    data_balanced = balance_data_oversampling(data)    
-    print('The shape of the balanced data:', data_balanced.shape)
-    
-    # Evaluate model performance after balancing the data
-    results = evaluate_model_performance(data_balanced)
-    print(results)
-
-    # data.to_csv('processed_data.csv', index=False)
-
-    # Building a better model
-
-    data_v2 = pd.read_csv('diabetic_data.csv')
-    data_v2 = process_data_v2(data_v2)
-
-    features_for_clustering = data_v2.drop(['readmitted'], axis=1)  # Exclude target variable if exists
-    
-    # Determine the optimal number of clusters
-    determine_optimal_clusters(features_for_clustering, max_k=10)
-    
-    n_clusters = int(input("Enter the optimal number of clusters based on the elbow plot: "))
-    
-    # Perform K-Means clustering and visualize
-    clustered_data = cluster_and_visualize(features_for_clustering, n_clusters)
-
-    # Further analysis of clustered_data can be performed here
+    # results = evaluate_model_performance(data)
+    # print(results)
+    #
+    # # Perform oversampling to balance the data
+    # data_balanced = balance_data_oversampling(data)
+    # print('The shape of the balanced data:', data_balanced.shape)
+    #
+    # # Evaluate model performance after balancing the data
+    # results = evaluate_model_performance(data_balanced)
+    # print(results)
+    #
+    # # data.to_csv('processed_data.csv', index=False)
+    #
+    # # Building a better model
+    #
+    # data_v2 = pd.read_csv('diabetic_data.csv')
+    # data_v2 = process_data_v2(data_v2)
+    #
+    # features_for_clustering = data_v2.drop(['readmitted'], axis=1)  # Exclude target variable if exists
+    #
+    # # Determine the optimal number of clusters
+    # determine_optimal_clusters(features_for_clustering, max_k=10)
+    #
+    # n_clusters = int(input("Enter the optimal number of clusters based on the elbow plot: "))
+    #
+    # # Perform K-Means clustering and visualize
+    # clustered_data = cluster_and_visualize(features_for_clustering, n_clusters)
+    #
+    # # Further analysis of clustered_data can be performed here
 
 
 if __name__ == '__main__':
