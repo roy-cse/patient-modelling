@@ -6,7 +6,7 @@ import seaborn as sns
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, roc_curve
 from sklearn.model_selection import KFold
 from sklearn.utils import resample
 
@@ -177,13 +177,16 @@ def plot_avg_lab_procedures_by_race(data):
 
 
 def evaluate_model_performance(data):
+    # Skipping diag_1, diag_2 and diag_3 since they have too many distinct values
+    data = data.drop(['diag_1', 'diag_2', 'diag_3'], axis=1)
+
     # Convert categorical variables to dummy variables
-    cat_cols = ['race', 'gender', 'age', 'admission_type_id' , 'discharge_disposition_id', 'admission_source_id', 'diag_1',
- 'diag_2', 'diag_3', 'A1Cresult', 'metformin', 'glipizide', 'glyburide', 'pioglitazone', 'rosiglitazone', 'insulin', 'change', 'diabetesMed']
+    cat_cols = ['race', 'gender', 'age', 'admission_type_id' , 'discharge_disposition_id', 'admission_source_id', 
+                'A1Cresult', 'metformin', 'glipizide', 'glyburide', 'pioglitazone', 'rosiglitazone', 'insulin', 'change', 'diabetesMed']
     data = pd.get_dummies(data, columns=cat_cols, drop_first=True)
 
     print('The shape of the data after converting categorical variables to dummy variables:', data.shape)
-    print('The columns of the data after converting categorical variables to dummy variables:', data.columns.values)
+    # print('The columns of the data after converting categorical variables to dummy variables:', data.columns.values)
 
     # Splitting dataset into features (X) and target (y)
     X = data.drop('readmitted', axis=1)
@@ -194,7 +197,7 @@ def evaluate_model_performance(data):
 
     # Feature selection with RFE
     model = LogisticRegression(max_iter=1000, solver='liblinear')
-    rfe = RFE(estimator=model, n_features_to_select=5)
+    rfe = RFE(estimator=model, n_features_to_select=20)
     rfe.fit(X_train, y_train)
 
     # Selected features
@@ -216,6 +219,52 @@ def evaluate_model_performance(data):
         "F1 Score": f1_score(y_test, y_pred),
         "ROC AUC": roc_auc_score(y_test, y_pred)
     }
+
+    # confusion matrix
+    confmat = confusion_matrix(y_true=y_test, y_pred=y_pred)
+
+    fig, ax = plt.subplots(figsize=(4,4))
+    ax.matshow(confmat, cmap=plt.cm.Blues, alpha=0.3)
+    for i in range(confmat.shape[0]):
+        for j in range(confmat.shape[1]):
+            ax.text(x=j, y=i, s=confmat[i, j], va='center', ha='center')
+
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    plt.tight_layout()
+
+    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
+                ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(20)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(15)
+    plt.show()
+
+    # ROC curve
+    # Predict probabilities & get probability of positive class
+    y_pred_proba = model.predict_proba(X_test[selected_features])[:, 1]
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba, pos_label=0)
+
+    fig = plt.figure(figsize=(7,7))
+    plt.plot(fpr, tpr, lw=2, label='Logistic Regression')
+    plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Random guessing')
+    plt.plot([0, 0, 1], [0, 1, 1], linestyle='-.', alpha=0.5, color='red', label='Perfect')
+
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+
+    plt.title('ROC Curve')
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.legend(loc=4, prop={'size': 18})
+
+    for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(20)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(15)
+    plt.show()
 
     # Output the results
     return {
@@ -250,20 +299,17 @@ def main():
     target_var = ['readmitted']
     print('The numerical cols are:', data.select_dtypes(include='number').columns.values)
    
+    # Removing outliers
     # Not removing outliers from these columns since they are categorical types
-
     categorical_int_cols = ['admission_type_id', 'discharge_disposition_id', 'admission_source_id']
    
-   # Not removing outliers from these columns since values are inside 3 standard deviations
+    # Not removing outliers from these columns since values are inside 3 standard deviations
     non_outlier_cols = ['number_outpatient', 'number_emergency', 'number_inpatient', 'time_in_hospital', 'num_procedures']
-
     final_non_outlier_cols = target_var + categorical_int_cols + non_outlier_cols
-
     print("\nColumns that are not outliers:\n", final_non_outlier_cols)
     
-    # Removing outliers
-    numerical_cols = data.select_dtypes(include='number').columns
     # Exclude the non-outlier columns
+    numerical_cols = data.select_dtypes(include='number').columns
     numerical_cols = numerical_cols.drop(final_non_outlier_cols)
 
     print('\n Dropping outliers from: ', numerical_cols.values)
@@ -272,22 +318,21 @@ def main():
     # We are not performing normalisation on any of the columns since the range of the values for every feature has insignificant difference
     # feature_normalization(data, numerical_cols)
     print("\nFinal shape of the data:\n", data.shape)
-    print(data.columns.values)
 
     # Data Visualisation
     data_visualisation(data, categorical_int_cols)
     
     # Evaluate model performance
     results = evaluate_model_performance(data)
-    print(results)
+    print("\n", results, "\n")
 
     # Perform oversampling to balance the data
     data_balanced = balance_data_oversampling(data)    
-    print('The shape of the balanced data:', data_balanced.shape)
+    print('\nThe shape of the balanced data:', data_balanced.shape)
     
     # Evaluate model performance after balancing the data
     results = evaluate_model_performance(data_balanced)
-    print(results)
+    print("\n", results, "\n")
 
     # data.to_csv('processed_data.csv', index=False)
 
