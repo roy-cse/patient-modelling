@@ -6,7 +6,7 @@ import seaborn as sns
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, roc_curve
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, roc_curve, precision_recall_curve, auc
 from sklearn.model_selection import KFold
 from sklearn.utils import resample
 
@@ -210,8 +210,10 @@ def evaluate_model_performance(data):
     kf = KFold(n_splits=10, shuffle=True, random_state=42)
     cv_scores = cross_val_score(model, X_train[selected_features], y_train, cv=kf)
 
-    # Performance metrics
+    # Model predictions
     y_pred = model.predict(X_test[selected_features])
+
+    # Performance metrics
     overall_metrics = {
         "Accuracy": accuracy_score(y_test, y_pred),
         "Precision": precision_score(y_test, y_pred),
@@ -238,6 +240,18 @@ def evaluate_model_performance(data):
         item.set_fontsize(20)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(15)
+    plt.show()
+
+    # Calculate precision and recall. Also the Area Under the Curve (AUC) for precision-recall curve
+    precision, recall, thresholds = precision_recall_curve(y_test, y_pred)
+    auc_score = auc(recall, precision)
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(recall, precision, label=f'Precision-Recall Curve (AUC = {auc_score:.2f})')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve')
+    plt.legend()
     plt.show()
 
     # ROC curve
